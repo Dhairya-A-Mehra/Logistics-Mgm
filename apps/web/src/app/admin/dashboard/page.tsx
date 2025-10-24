@@ -107,7 +107,7 @@ export default function AdminDashboard() {
           { data: deliveryMetrics },
         ] = await Promise.all([
           supabase.from('orders').select('*', { count: 'exact', head: true }),
-          supabase.from('shipments').select('*', { count: 'exact', head: true }).eq('status', 'in_transit'),
+          supabase.from('shipments').select('*', { count: 'exact', head: true }).eq('status', 'in-transit'),
           supabase.from('customers').select('*', { count: 'exact', head: true }),
           supabase.rpc('calculate_revenue_stats'),
           supabase.rpc('calculate_delivery_metrics'),

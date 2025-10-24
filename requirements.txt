@@ -36,3 +36,5 @@ python-dotenv
 python-multipart
 Faker
 pydantic[email]
+
+httpx

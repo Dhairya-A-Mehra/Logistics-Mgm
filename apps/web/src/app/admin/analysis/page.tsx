@@ -159,7 +159,7 @@ export default function Analysis() {
                   const pct = Math.round((count / totalStatuses) * 100);
                   const color =
                     label === 'delivered' ? 'bg-green-500' :
-                    label === 'in_transit' ? 'bg-blue-500' :
+                    label === 'in-transit' ? 'bg-blue-500' :
                     label === 'pending' ? 'bg-yellow-500' : 'bg-gray-400';
                   return (
                     <div key={label}>
