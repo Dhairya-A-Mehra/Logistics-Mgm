@@ -2,13 +2,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .database import engine, Base
-from .api.routers import auth, admin
+from .api.routers import auth, admin, ai_router
 from .config import settings
+
 # Import all models to register them with Base
 from .models import (
-    Customer, Warehouse, Vehicle, Order, Shipment, 
-    Inventory, VehicleTelemetry, FuelPrice, PackagingType,
-    Document, AgentAuditLog
+    Customer,
+    Warehouse,
+    Vehicle,
+    Order,
+    Shipment,
+    Inventory,
+    VehicleTelemetry,
+    FuelPrice,
+    PackagingType,
+    Document,
+    AgentAuditLog,
 )
 import logging
 
@@ -26,9 +35,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not create database tables at startup: {e}")
         logger.warning("Tables will be created on first database access")
-    
+
     yield
-    
+
     # Shutdown: Clean up resources
     logger.info("Application shutting down")
 
@@ -39,7 +48,7 @@ app = FastAPI(
     description="Logistics Management System API with JWT Authentication",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Configure CORS
@@ -53,7 +62,10 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
-app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin - User Management"])
+app.include_router(
+    admin.router, prefix="/api/v1/admin", tags=["Admin - User Management"]
+)
+app.include_router(ai_router, prefix="/ai", tags=["AI"])
 
 
 @app.get("/api/health", tags=["Health Check"])
@@ -67,14 +79,14 @@ def database_health_check():
     """Database health check endpoint"""
     from sqlalchemy import text
     from .database import engine
-    
+
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
         return {
             "status": "ok",
             "message": "Database connection successful",
-            "database": "connected"
+            "database": "connected",
         }
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
@@ -82,5 +94,5 @@ def database_health_check():
             "status": "error",
             "message": "Database connection failed",
             "database": "disconnected",
-            "error": str(e)
+            "error": str(e),
         }
