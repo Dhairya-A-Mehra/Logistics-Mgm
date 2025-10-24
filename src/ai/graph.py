@@ -7,6 +7,7 @@ from .agents.coordinator import (
     rag_chain as coordinator_chain,
 )  # Adjusted relative import (from ai/agents/)
 from .agents.mobility import mobility_rag_chain  # Adjusted relative import
+
 # We'll import agent executors lazily inside the node functions to avoid
 # import-time failures when an agent module's dependencies (e.g., LangChain)
 # are missing or incompatible with the environment.
@@ -85,7 +86,9 @@ def warehouse_node(state: AgentState) -> AgentState:
             if hasattr(mod, "get_warehouse_agent_executor"):
                 _cached_executors["warehouse"] = mod.get_warehouse_agent_executor()
             else:
-                _cached_executors["warehouse"] = getattr(mod, "warehouse_agent_executor")
+                _cached_executors["warehouse"] = getattr(
+                    mod, "warehouse_agent_executor"
+                )
         except Exception as exc:
             print("[warning] could not import warehouse agent module:", exc)
             _cached_executors["warehouse"] = None

@@ -91,6 +91,8 @@ def get_tracking_agent_executor():
         executor = AgentExecutor(agent=tool_calling_agent, tools=tools, verbose=False)
         return executor
     except Exception as exc:  # pragma: no cover - defensive fallback
-        print("[warning] could not build LangChain tool-calling agent; using fallback. Error:", exc)
+        print(
+            "[warning] could not build LangChain tool-calling agent; using fallback. Error:",
+            exc,
+        )
         return _FallbackExecutor(llm)
-

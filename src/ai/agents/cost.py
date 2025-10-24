@@ -69,6 +69,8 @@ def get_cost_agent_executor():
         executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
         return executor
     except Exception as exc:  # pragma: no cover - defensive
-        print("[warning] could not build cost LangChain agent; using fallback. Error:", exc)
+        print(
+            "[warning] could not build cost LangChain agent; using fallback. Error:",
+            exc,
+        )
         return _FallbackExecutor(llm)
-
