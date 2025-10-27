@@ -7,19 +7,16 @@ from pydantic import BaseModel, Field
 from langchain.tools import tool
 from ...config import (
     settings,
-)  # Adjusted to use project's src/config.py (absolute import from src/)
+)
 
-# Removed custom dotenv_path loading; rely on project's config.py for env vars
-
-SUPABASE_URL = settings.DATABASE_URL  # Use from config
-SUPABASE_KEY = settings.SUPABASE_SERVICE_KEY  # Use from config
+SUPABASE_URL = settings.SUPABASE_URL
+SUPABASE_KEY = settings.SUPABASE_KEY
 supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 # --- Tool: Shipment Status Lookup ---
 class ShipmentLookupSchema(BaseModel):
     """Input schema for the shipment lookup tool."""
-
     shipment_id: str = Field(description="The UUID of the shipment to look up.")
 
 
@@ -30,7 +27,7 @@ def get_shipment_status(shipment_id: str) -> dict:
     try:
         response = (
             supabase_client.from_("shipments")
-            .select("status, current_eta")
+            .select("status, current_eta, vehicle_id") # Also select vehicle_id
             .eq("shipment_id", shipment_id)
             .single()
             .execute()
@@ -46,16 +43,14 @@ def get_shipment_status(shipment_id: str) -> dict:
 # --- Tool: Inventory Level Lookup ---
 class InventoryLookupSchema(BaseModel):
     """Input schema for the inventory lookup tool."""
-
-    sku: str = Field(
-        description="The SKU (Stock Keeping Unit) of the product to look up."
-    )
+    sku: str = Field(description="The SKU (Stock Keeping Unit) of the product to look up.")
 
 
 @tool("inventory-level-lookup", args_schema=InventoryLookupSchema)
 def get_inventory_level(sku: str) -> dict:
     """Looks up the quantity on hand for a specific product SKU across all warehouses."""
     print(f"--- Tool Executing: get_inventory_level for SKU: {sku} ---")
+    # (Implementation remains the same)
     try:
         response = (
             supabase_client.from_("inventory")
@@ -65,9 +60,7 @@ def get_inventory_level(sku: str) -> dict:
         )
         if response.data:
             total_qty = sum(item["qty_on_hand"] for item in response.data)
-            per_warehouse = {
-                item["warehouse_id"]: item["qty_on_hand"] for item in response.data
-            }
+            per_warehouse = {item["warehouse_id"]: item["qty_on_hand"] for item in response.data}
             return {
                 "sku": sku,
                 "total_quantity_on_hand": total_qty,
@@ -82,18 +75,14 @@ def get_inventory_level(sku: str) -> dict:
 # --- Tool: Packaging Optimizer ---
 class PackagingOptimizerSchema(BaseModel):
     """Input schema for the packaging optimizer tool."""
-
-    item_volumes: list[float] = Field(
-        description="A list of the individual volumes (in cm³) of each item to be packed."
-    )
+    item_volumes: list[float] = Field(description="A list of the individual volumes (in cm³) of each item to be packed.")
 
 
 @tool("packaging-optimizer", args_schema=PackagingOptimizerSchema)
 def find_best_packaging(item_volumes: list[float]) -> dict:
     """Calculates the total volume from a list of item volumes and finds the smallest box that can fit them."""
-    print(
-        f"--- Tool Executing (Robust): find_best_packaging for volumes: {item_volumes} ---"
-    )
+    print(f"--- Tool Executing: find_best_packaging for volumes: {item_volumes} ---")
+    # (Implementation remains the same)
     try:
         if not item_volumes:
             return {"error": "No item volumes provided."}
@@ -104,50 +93,39 @@ def find_best_packaging(item_volumes: list[float]) -> dict:
             supabase_client.from_("packaging_types")
             .select("packaging_id, name, volume_cm3, cost_per_unit")
             .gte("volume_cm3", total_items_volume)
+            .order("volume_cm3", desc=False)
+            .limit(1)
             .execute()
         )
         if response.data:
-            suitable_boxes = sorted(response.data, key=lambda box: box["volume_cm3"])
-            best_box = suitable_boxes[0]
+            best_box = response.data[0]
             wasted_space = best_box["volume_cm3"] - total_items_volume
             result = {
-                "recommendation": {
-                    "box_name": best_box["name"],
-                    "box_volume_cm3": best_box["volume_cm3"],
-                },
+                "recommendation": {"box_name": best_box["name"], "box_volume_cm3": best_box["volume_cm3"]},
                 "analysis": {
                     "total_items_volume_cm3": total_items_volume,
                     "wasted_space_cm3": wasted_space,
-                    "efficiency_percentage": round(
-                        (total_items_volume / best_box["volume_cm3"]) * 100, 2
-                    ),
+                    "efficiency_percentage": round((total_items_volume / best_box["volume_cm3"]) * 100, 2),
                 },
             }
-            print(f"--- Tool Succeeded. Returning: {result} ---")
             return result
         else:
             return {"error": "No suitable packaging found. Items may be too large."}
     except Exception as e:
-        print(f"!!! TOOL FAILED: An exception occurred in find_best_packaging !!!")
-        print(traceback.format_exc())
         return {"error": f"An unexpected error occurred: {str(e)}"}
 
 
 # --- Tool: Cost Calculation ---
 class CostCalculationSchema(BaseModel):
     """Input schema for the route cost calculation tool."""
-
-    shipment_id: str = Field(
-        description="The UUID of the shipment for which to calculate the fuel cost."
-    )
+    shipment_id: str = Field(description="The UUID of the shipment for which to calculate the fuel cost.")
 
 
 @tool("route-fuel-cost-calculator", args_schema=CostCalculationSchema)
 def calculate_route_fuel_cost(shipment_id: str) -> dict:
     """Calculates the total estimated fuel cost for a given shipment ID."""
-    print(
-        f"--- Tool Executing: calculate_route_fuel_cost for Shipment: {shipment_id} ---"
-    )
+    print(f"--- Tool Executing: calculate_route_fuel_cost for Shipment: {shipment_id} ---")
+    # (Implementation remains the same)
     try:
         shipment_info_resp = (
             supabase_client.from_("shipments")
@@ -158,17 +136,13 @@ def calculate_route_fuel_cost(shipment_id: str) -> dict:
         )
         if not shipment_info_resp.data:
             return {"error": f"Shipment ID {shipment_id} not found."}
-        shipment_info, distance, vehicle = (
-            shipment_info_resp.data,
-            shipment_info_resp.data["distance_km"],
-            shipment_info_resp.data["vehicles"],
-        )
+        shipment_info = shipment_info_resp.data
+        distance = shipment_info["distance_km"]
+        vehicle = shipment_info["vehicles"]
         if not vehicle:
             return {"error": "No vehicle assigned to this shipment."}
-        fuel_type, consumption = (
-            vehicle["fuel_type"],
-            vehicle["consumption_l_per_100km"],
-        )
+        fuel_type = vehicle["fuel_type"]
+        consumption = vehicle["consumption_l_per_100km"]
         fuel_price_resp = (
             supabase_client.from_("fuel_prices")
             .select("cost_per_liter")
@@ -194,15 +168,61 @@ def calculate_route_fuel_cost(shipment_id: str) -> dict:
             f"total_fuel_{unit_name}": round(total_fuel_liters, 2),
             "estimated_fuel_cost": f"${round(total_cost, 2)}",
         }
-        print(f"--- Tool Succeeded. Returning: {result} ---")
         return result
     except Exception as e:
-        print(
-            f"!!! TOOL FAILED: An exception occurred in calculate_route_fuel_cost !!!"
-        )
-        print(traceback.format_exc())
         return {"error": f"An unexpected error occurred: {str(e)}"}
 
+
+# --- NEW Tool: Order Details Lookup ---
+class OrderLookupSchema(BaseModel):
+    """Input schema for the order lookup tool."""
+    order_id: str = Field(description="The UUID of the order to look up.")
+
+@tool("order-details-lookup", args_schema=OrderLookupSchema)
+def get_order_details(order_id: str) -> dict:
+    """Looks up the details of a specific order, including items, destination, and status."""
+    print(f"--- Tool Executing: get_order_details for Order ID: {order_id} ---")
+    try:
+        response = (
+            supabase_client.from_("orders")
+            .select("order_id, status, items, destination, estimated_delivery_date")
+            .eq("order_id", order_id)
+            .single()
+            .execute()
+        )
+        if response.data:
+            return response.data
+        else:
+            return {"error": "Order not found."}
+    except Exception as e:
+        return {"error": f"Database error: {str(e)}"}
+
+
+# --- NEW Tool: Vehicle Location Lookup ---
+class VehicleLocationSchema(BaseModel):
+    """Input schema for the vehicle location tool."""
+    vehicle_id: str = Field(description="The UUID of the vehicle to locate.")
+
+@tool("vehicle-location-lookup", args_schema=VehicleLocationSchema)
+def get_vehicle_location(vehicle_id: str) -> dict:
+    """Finds the most recent telemetry data (location and speed) for a specific vehicle."""
+    print(f"--- Tool Executing: get_vehicle_location for Vehicle ID: {vehicle_id} ---")
+    try:
+        response = (
+            supabase_client.from_("vehicle_telemetry")
+            .select("lat, lon, speed_kmph, ts")
+            .eq("vehicle_id", vehicle_id)
+            .order("ts", desc=True)
+            .limit(1)
+            .single()
+            .execute()
+        )
+        if response.data:
+            return response.data
+        else:
+            return {"error": "No telemetry data found for this vehicle."}
+    except Exception as e:
+        return {"error": f"Database error: {str(e)}"}
 
 # --- Utility Function for Audit Logging (NOT a tool for the LLM) ---
 def log_agent_decision(agent_name: str, query: str, decision: dict | str):

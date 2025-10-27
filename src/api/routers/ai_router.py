@@ -13,7 +13,11 @@ class QueryRequest(BaseModel):
 
 
 @router.post("/query")
-def run_ai_query(request: QueryRequest):
-    state = AgentState(initial_query=request.query, intermediate_steps=[])
-    result = agent_graph.invoke(state)
-    return {"response": result["final_response"]}
+async def run_ai_query(request: QueryRequest):
+    try:
+        state = AgentState(initial_query=request.query, intermediate_steps=[])
+        result = agent_graph.invoke(state)
+        return {"response": result.get("final_response", "No response generated")}
+    except Exception as e:
+        logger.error(f"Error processing query: {str(e)}", exc_info=True)
+        return {"error": f"Error processing your request: {str(e)}"}

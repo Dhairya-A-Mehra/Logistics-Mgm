@@ -21,25 +21,51 @@ export default function AdminChat() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  // In apps/web/src/app/admin/chat/page.tsx
+const handleSend = async () => {
+  if (!input.trim()) return;
 
-    const userMessage = { id: Date.now(), role: 'user', content: input };
-    setMessages([...messages, userMessage]);
-    setInput('');
-    setLoading(true);
+  const userMessage = { id: Date.now(), role: 'user' as const, content: input };
+  setMessages(prev => [...prev, userMessage]);
+  setInput('');
+  setLoading(true);
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
-      const aiMessage = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: 'This is a placeholder response. The AI chatbot will be integrated with the backend soon.',
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-      setLoading(false);
-    }, 1000);
-  };
+  try {
+    const response = await fetch('http://localhost:8000/ai/query', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: input }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    const aiMessage = {
+      id: Date.now() + 1,
+      role: 'assistant' as const,
+      content: data.response || data.error || 'I apologize, but I encountered an issue processing your request.',
+    };
+    
+    setMessages(prev => [...prev, aiMessage]);
+  } catch (error) {
+    console.error('Error sending message:', error);
+    const errorMessage = {
+      id: Date.now() + 1,
+      role: 'assistant' as const,
+      content: `Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}. Please try again later.`
+    };
+    setMessages(prev => [...prev, errorMessage]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <DashboardLayout role="admin" menuItems={adminMenuItems}>

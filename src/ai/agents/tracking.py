@@ -1,98 +1,56 @@
-"""Tracking agent factory.
-
-This module avoids importing the higher-level LangChain agent helpers at
-module-import time because those APIs vary between LangChain releases and
-can raise ImportError which prevents the whole application from starting.
-
-Instead we provide a get_tracking_agent_executor() factory which attempts to
-build a proper tool-calling AgentExecutor at runtime and falls back to a
-simple LLM-only executor if the LangChain helper is not available.
-"""
-
 from typing import Any, Dict
+from .shared import llm
+# Import the specific tools for this agent, including the new one
+from ..tools.database import get_shipment_status, get_vehicle_location
 
-from .shared import llm  # keep the project's shared LLM
-from ..tools.database import get_shipment_status
-
-# Tools list (kept lightweight so module import is safe)
-tools = [get_shipment_status]
+# The list of tools this agent can use is now expanded
+tools = [get_shipment_status, get_vehicle_location]
 
 
 class _FallbackExecutor:
-    """A minimal executor used when the LangChain agent factory isn't
-    available. It simply calls the underlying LLM and returns a dict with
-    a single 'output' key so callers keep the same shape.
-    """
-
+    """A minimal executor used when LangChain agent creation fails."""
     def __init__(self, llm):
         self.llm = llm
 
     def invoke(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         user_input = payload.get("input") or ""
-        # Try common LLM call styles
-        if hasattr(self.llm, "predict"):
-            out = self.llm.predict(user_input)
-        elif hasattr(self.llm, "__call__"):
-            out = self.llm(user_input)
-        elif hasattr(self.llm, "generate"):
-            # generate may return a complex object; try to coerce
-            gen = self.llm.generate([user_input])
-            try:
-                out = gen.generations[0][0].text
-            except Exception:
-                out = str(gen)
-        else:
-            out = ""
-        return {"output": out}
+        response = self.llm.invoke(user_input)
+        return {"output": response.content}
 
 
 def get_tracking_agent_executor():
-    """Return an executor-like object with an `invoke` method.
-
-    This will try to construct a real AgentExecutor using the installed
-    LangChain utilities. If that fails (ImportError or API mismatch), it
-    returns a lightweight fallback implementation so the app can keep
-    running.
+    """
+    Factory function to create and return the tracking agent executor.
     """
     try:
-        # Use importlib to avoid static analyzer warnings for optional/langchain
-        import importlib
+        from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+        from langchain.agents import create_tool_calling_agent, AgentExecutor
 
-        prompts_mod = None
-        try:
-            prompts_mod = importlib.import_module("langchain_core.prompts")
-        except Exception:
-            try:
-                prompts_mod = importlib.import_module("langchain.prompts")
-            except Exception:
-                prompts_mod = None
+        prompt = ChatPromptTemplate.from_messages([
+            (
+                "system",
+                """You are a helpful tracking assistant for the LogiMAS system.
+- Your job is to provide shipment status and vehicle location updates.
+- Use the 'shipment-status-lookup' tool to find the status and vehicle ID for a shipment.
+- Use the 'vehicle-location-lookup' tool to find the current GPS coordinates of a vehicle."""
+            ),
+            ("human", "{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ])
 
-        if prompts_mod is None:
-            raise ImportError("no ChatPromptTemplate implementation found")
+        agent = create_tool_calling_agent(llm, tools, prompt)
 
-        ChatPromptTemplate = getattr(prompts_mod, "ChatPromptTemplate")
-
-        agents_mod = importlib.import_module("langchain.agents")
-        create_tool_calling_agent = getattr(agents_mod, "create_tool_calling_agent")
-        AgentExecutor = getattr(agents_mod, "AgentExecutor")
-
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    "You are a helpful tracking assistant for the LogiMAS system. You have access to a tool that can look up shipment information. Only use the tool if a valid shipment ID is provided in the user's query.",
-                ),
-                ("human", "{input}"),
-                ("placeholder", "{agent_scratchpad}"),
-            ]
+        executor = AgentExecutor(
+            agent=agent,
+            tools=tools,
+            verbose=False,
+            handle_parsing_errors=True,
         )
-
-        tool_calling_agent = create_tool_calling_agent(llm, tools, prompt)
-        executor = AgentExecutor(agent=tool_calling_agent, tools=tools, verbose=False)
         return executor
-    except Exception as exc:  # pragma: no cover - defensive fallback
-        print(
-            "[warning] could not build LangChain tool-calling agent; using fallback. Error:",
-            exc,
-        )
+
+    except ImportError as ie:
+        print(f"[ERROR] Failed to import LangChain dependencies for Tracking Agent: {ie}")
+        return _FallbackExecutor(llm)
+    except Exception as e:
+        print(f"[ERROR] An unexpected error occurred while building Tracking Agent: {e}")
         return _FallbackExecutor(llm)
