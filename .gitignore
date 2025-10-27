@@ -4,6 +4,8 @@
 .env
 .venv
 venv/
+.lmas
+lmas/
 .env.*
 !.env.example
 
