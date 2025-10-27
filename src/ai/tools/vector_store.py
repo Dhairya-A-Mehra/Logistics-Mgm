@@ -2,31 +2,24 @@ import os
 from typing import List, Any
 from dotenv import load_dotenv
 import psycopg2
-from pgvector.psycopg2 import register_vector  # Import the vector register
+from pgvector.psycopg2 import register_vector
 
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 from sentence_transformers import SentenceTransformer
-from ...config import (
-    settings,
-)  # Adjusted to use project's src/config.py (absolute import from src/)
+from ...config import settings
 
-# Removed custom dotenv_path loading; rely on project's config.py for env vars
-
-DB_CONNECTION_STRING = settings.DB_CONNECTION_STRING  # Use from config
-EMBEDDING_MODEL_NAME = (
-    settings.EMBEDDING_MODEL_NAME or "all-MiniLM-L6-v2"
-)  # Use from config, with default
+DB_CONNECTION_STRING = settings.DB_CONNECTION_STRING
+EMBEDDING_MODEL_NAME = settings.EMBEDDING_MODEL_NAME or "all-MiniLM-L6-v2"
 
 # --- Custom Retriever Definition ---
-
 
 class DirectPostgresRetriever(BaseRetriever):
     """
     A custom retriever that connects directly to PostgreSQL using psycopg2
-    to execute the vector search.
+    to execute a vector similarity search with the correct column names.
     """
 
     embedding_model: Any
@@ -43,12 +36,20 @@ class DirectPostgresRetriever(BaseRetriever):
             conn = psycopg2.connect(self.db_uri)
             register_vector(conn)
             cur = conn.cursor()
+            sql_query = """
+                SELECT
+                    doc_id,
+                    text_snippet,
+                    source_type,
+                    1 - (embedding <=> %s::vector) AS similarity
+                FROM
+                    documents
+                ORDER BY
+                    embedding <=> %s::vector
+                LIMIT %s;
+            """
 
-            # --- THIS IS THE CORRECTED LINE ---
-            sql_query = "SELECT * FROM match_documents(%s::vector, %s);"
-
-            # The rest of the code remains the same
-            cur.execute(sql_query, (query_embedding, self.k_results))
+            cur.execute(sql_query, (query_embedding, query_embedding, self.k_results))
 
             results = cur.fetchall()
             documents = []
@@ -64,13 +65,10 @@ class DirectPostgresRetriever(BaseRetriever):
             return documents
         except Exception as e:
             print(f"An error occurred in DirectPostgresRetriever: {e}")
-            return []
+            raise
         finally:
             if conn:
                 conn.close()
-
-
-# --- Factory Function for Retriever ---
 
 
 def get_retriever(k_results: int = 5) -> BaseRetriever:
@@ -84,12 +82,9 @@ def get_retriever(k_results: int = 5) -> BaseRetriever:
         k_results=k_results,
     )
 
+# --- Reusable Embedding Utility (Unchanged) ---
 
-# --- NEW REUSABLE EMBEDDING UTILITY ---
-
-# Singleton pattern to ensure the model is loaded only once per server start.
 _embedding_model_instance = None
-
 
 def get_embedding_model():
     """Loads the SentenceTransformer model only once."""
@@ -104,7 +99,6 @@ def get_embedding_model():
 def create_embedding(text: str) -> list[float]:
     """
     Takes a string of text and returns its vector embedding as a list of floats.
-    This function is used by the /incidents endpoint in main.py.
     """
     model = get_embedding_model()
     return model.encode(text).tolist()

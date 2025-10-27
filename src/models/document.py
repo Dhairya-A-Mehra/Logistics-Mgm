@@ -29,7 +29,7 @@ class Document(Base):
     
     # Use Vector if pgvector is available, otherwise use LargeBinary
     if PGVECTOR_AVAILABLE:
-        embedding = Column(Vector(1536))
+        embedding = Column(Vector(384))
     else:
         # Store as binary data if pgvector is not installed
         embedding = Column(LargeBinary)

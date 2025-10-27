@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 
 from .database import engine, Base
-from .api.routers import admin, ai_router,auth
+from .api.routers import admin, ai_router,auth,delivery
 from .config import settings
 
 # Import all models to register them with Base
@@ -67,6 +67,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(
     admin.router, prefix="/api/v1/admin", tags=["Admin - User Management"]
 )
+app.include_router(delivery.router, prefix="/api/v1/delivery", tags=["Delivery"])
 app.include_router(ai_router.router, prefix="/ai", tags=["AI"])
 
 
