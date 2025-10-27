@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import TrackingMap from '@/components/TrackingMap';
+import { fetchShipmentById } from '@/lib/supabase/client';
 
 const deliveryMenuItems = [
   { name: 'Dashboard', href: '/delivery/dashboard', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
@@ -12,56 +13,40 @@ const deliveryMenuItems = [
   { name: 'My Deliveries', href: '/delivery/deliveries', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg> },
 ];
 
-const shipmentsData: Record<string, any> = {
-  'SHP-001': {
-    id: 'SHP-001',
-    order: 'ORD-1234',
-    customer: 'John Doe',
-    status: 'in-transit',
-    location: 'Delhi Hub',
-    eta: '2 hours',
-    progress: 75,
-    origin: { lat: 28.6139, lng: 77.2090, label: 'Delhi Warehouse' },
-    destination: { lat: 19.0760, lng: 72.8777, label: 'Mumbai - Customer Address' },
-    currentLocation: { lat: 23.0225, lng: 72.5714, label: 'Ahmedabad Hub' },
-  },
-  'SHP-002': {
-    id: 'SHP-002',
-    order: 'ORD-1235',
-    customer: 'Jane Smith',
-    status: 'delivered',
-    location: 'Mumbai',
-    eta: 'Delivered',
-    progress: 100,
-    origin: { lat: 28.6139, lng: 77.2090, label: 'Delhi Warehouse' },
-    destination: { lat: 19.0760, lng: 72.8777, label: 'Mumbai - Customer Address' },
-    currentLocation: { lat: 19.0760, lng: 72.8777, label: 'Delivered' },
-  },
-  'SHP-003': {
-    id: 'SHP-003',
-    order: 'ORD-1236',
-    customer: 'Bob Johnson',
-    status: 'pending',
-    location: 'Warehouse A',
-    eta: '5 hours',
-    progress: 25,
-    origin: { lat: 12.9716, lng: 77.5946, label: 'Bangalore Warehouse' },
-    destination: { lat: 13.0827, lng: 80.2707, label: 'Chennai - Customer Address' },
-    currentLocation: { lat: 12.9716, lng: 77.5946, label: 'Bangalore Warehouse' },
-  },
-};
+// Note: previously this page used a static `shipmentsData` object. We now fetch from Supabase.
 
 export default function DeliveryTracking() {
   const [shipmentId, setShipmentId] = useState('');
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleTrack = () => {
-    const shipment = shipmentsData[shipmentId.toUpperCase()];
-    if (shipment) {
-      setSelectedShipment(shipment);
-    } else {
-      alert('Shipment not found!');
+  const handleTrack = async () => {
+    if (!shipmentId) return;
+    setLoading(true);
+    try {
+      const data = await fetchShipmentById(shipmentId);
+      if (!data) {
+        alert('Shipment not found');
+        setSelectedShipment(null);
+      } else {
+        setSelectedShipment({
+          id: data.id,
+          order: data.order,
+          customer: data.customer,
+          status: data.status,
+          eta: data.eta,
+          progress: data.progress || 0,
+          origin: data.origin,
+          destination: data.destination,
+          currentLocation: data.currentLocation,
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error fetching shipment');
       setSelectedShipment(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,9 +73,10 @@ export default function DeliveryTracking() {
             </div>
             <button
               onClick={handleTrack}
-              className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+              disabled={loading}
+              className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
             >
-              Track Shipment
+              {loading ? 'Loading...' : 'Track Shipment'}
             </button>
           </div>
         </div>
