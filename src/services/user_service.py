@@ -57,8 +57,12 @@ def get_all_users(db: Session, skip: int = 0, limit: int = 100) -> list[Customer
     return db.query(Customer).offset(skip).limit(limit).all()
 
 
-def get_users_by_role(db: Session, role: str, skip: int = 0, limit: int = 100) -> list[Customer]:
-    """Get users by role"""
+def get_users_by_role(db: Session, role: str, skip: int = 0, limit: int = 1000) -> list[Customer]:
+    """
+    Get users by role.
+    The default limit has been increased from 100 to 1000 to ensure all delivery personnel
+    are fetched for the driver assignment dropdown.
+    """
     return db.query(Customer).filter(Customer.role == role).offset(skip).limit(limit).all()
 
 

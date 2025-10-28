@@ -78,3 +78,54 @@ def create_shipment_for_order(db: Session, order_id: UUID):
     db.refresh(db_shipment)
 
     return db_shipment
+
+
+def get_shipments_for_driver(db: Session, driver_id: UUID):
+    """
+    Fetches all shipments assigned to a specific driver.
+    This query joins across shipments, vehicles, orders, and customers to collect all
+    necessary information in one efficient call.
+    """
+    return (
+        db.query(models.Shipment)
+        .join(models.Vehicle)
+        .filter(models.Vehicle.driver_id == driver_id)
+        .options(
+            joinedload(models.Shipment.order).joinedload(models.Order.customer)
+        )
+        .order_by(models.Shipment.shipped_at.desc())
+        .all()
+    )
+
+def update_shipment_status(db: Session, shipment_id: UUID, new_status: str, driver_id: UUID):
+    """
+    Updates a shipment's status, with crucial business logic and security checks.
+    """
+    # 1. Find the shipment and eagerly load related data for efficiency
+    shipment = db.query(models.Shipment).options(
+        joinedload(models.Shipment.vehicle),
+        joinedload(models.Shipment.order)
+    ).filter(models.Shipment.shipment_id == shipment_id).first()
+
+    if not shipment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shipment not found.")
+
+    # 2. SECURITY CHECK: Ensure the person updating is the assigned driver
+    if not shipment.vehicle or shipment.vehicle.driver_id != driver_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to update this shipment.")
+
+    # 3. Update the statuses
+    shipment.status = new_status
+    shipment.order.status = new_status
+
+    # 4. CRITICAL BUSINESS LOGIC: Perform actions based on the new status
+    if new_status == "delivered":
+        # Set the actual delivery date on the order
+        shipment.order.actual_delivery_date = datetime.now(timezone.utc)
+        # Free up the vehicle to be used for another delivery
+        shipment.vehicle.status = "active"
+
+    # 5. Commit the transaction
+    db.commit()
+    db.refresh(shipment)
+    return shipment

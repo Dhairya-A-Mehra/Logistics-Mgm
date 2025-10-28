@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 
+// The menu items for the admin sidebar
 const adminMenuItems = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
     { name: 'Dispatch Orders', href: '/admin/dispatch', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg> },
@@ -14,18 +15,31 @@ const adminMenuItems = [
     { name: 'Vehicles', href: '/admin/vehicles', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> },
 ];
 
+// Initial state for a new vehicle form
 const initialVehicleState = {
-  vehicle_type: 'truck', plate_number: '', capacity_kg: 1000, fuel_type: 'diesel',
-  driver_name: '', current_location: '', status: 'active'
+  vehicle_type: 'truck',
+  plate_number: '',
+  capacity_kg: 1000,
+  fuel_type: 'diesel',
+  driver_id: null,
+  current_location: '',
+  status: 'active'
 };
 
-const VehicleModal = ({ isOpen, onClose, onSubmit, vehicle }) => {
+/**
+ * A reusable modal component for adding or editing a vehicle.
+ */
+const VehicleModal = ({ isOpen, onClose, onSubmit, vehicle, drivers }) => {
   const [formData, setFormData] = useState(initialVehicleState);
   const isEditMode = vehicle && vehicle.vehicle_id;
 
+  // Pre-fill the form when the modal opens for editing
   useEffect(() => {
     if (isOpen) {
-        setFormData(isEditMode ? { ...vehicle } : { ...initialVehicleState });
+      const initialData = isEditMode
+        ? { ...vehicle, driver_id: vehicle.driver?.customer_id || null } // Use existing driver_id
+        : { ...initialVehicleState };
+      setFormData(initialData);
     }
   }, [vehicle, isOpen]);
 
@@ -37,7 +51,12 @@ const VehicleModal = ({ isOpen, onClose, onSubmit, vehicle }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ ...formData, capacity_kg: parseFloat(formData.capacity_kg) });
+    const payload = {
+        ...formData,
+        capacity_kg: parseFloat(formData.capacity_kg),
+        driver_id: formData.driver_id === "" ? null : formData.driver_id, // Ensure unassigned is sent as null
+    };
+    onSubmit(payload);
   };
 
   return (
@@ -46,44 +65,66 @@ const VehicleModal = ({ isOpen, onClose, onSubmit, vehicle }) => {
         <h2 className="text-2xl font-bold mb-6">{isEditMode ? 'Edit Vehicle' : 'Add New Vehicle'}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="block text-sm font-medium text-gray-400 mb-1">Plate Number</label><input name="plate_number" value={formData.plate_number} onChange={handleChange} placeholder="e.g., MH-01-AB-1234" required className="w-full p-2 bg-gray-700 border-gray-600 rounded"/></div>
-          <div><label className="block text-sm font-medium text-gray-400 mb-1">Driver Name</label><input name="driver_name" value={formData.driver_name} onChange={handleChange} placeholder="e.g., John Doe" className="w-full p-2 bg-gray-700 border-gray-600 rounded"/></div>
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">Assign Driver</label>
+            <select name="driver_id" value={formData.driver_id || ''} onChange={handleChange} className="w-full p-2 bg-gray-700 border-gray-600 rounded">
+                <option value="">-- Unassigned --</option>
+                {drivers.map(driver => (
+                    <option key={driver.customer_id} value={driver.customer_id}>{driver.name}</option>
+                ))}
+            </select>
+          </div>
           <div><label className="block text-sm font-medium text-gray-400 mb-1">Current Location</label><input name="current_location" value={formData.current_location} onChange={handleChange} placeholder="e.g., Mumbai" className="w-full p-2 bg-gray-700 border-gray-600 rounded"/></div>
           <div><label className="block text-sm font-medium text-gray-400 mb-1">Capacity (kg)</label><input name="capacity_kg" type="number" value={formData.capacity_kg} onChange={handleChange} required className="w-full p-2 bg-gray-700 border-gray-600 rounded"/></div>
           <div><label className="block text-sm font-medium text-gray-400 mb-1">Vehicle Type</label><select name="vehicle_type" value={formData.vehicle_type} onChange={handleChange} className="w-full p-2 bg-gray-700 border-gray-600 rounded"><option value="truck">Truck</option><option value="van">Van</option><option value="bike">Bike</option></select></div>
           <div><label className="block text-sm font-medium text-gray-400 mb-1">Fuel Type</label><select name="fuel_type" value={formData.fuel_type} onChange={handleChange} className="w-full p-2 bg-gray-700 border-gray-600 rounded"><option value="diesel">Diesel</option><option value="petrol">Petrol</option><option value="EV">EV</option><option value="CNG">CNG</option></select></div>
           <div><label className="block text-sm font-medium text-gray-400 mb-1">Status</label><select name="status" value={formData.status} onChange={handleChange} className="w-full p-2 bg-gray-700 border-gray-600 rounded"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="inactive">Inactive</option></select></div>
-          <div className="flex justify-end gap-4 pt-4"><button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500">Cancel</button><button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">{isEditMode ? 'Save Changes' : 'Add Vehicle'}</button></div>
+          <div className="flex justify-end gap-4 pt-4"><button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 rounded-lg">Cancel</button><button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{isEditMode ? 'Save Changes' : 'Add Vehicle'}</button></div>
         </form>
       </div>
     </div>
   );
 };
 
+/**
+ * The main component for the Vehicle Management page.
+ */
 export default function Vehicles() {
   const [vehicles, setVehicles] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
 
-  const fetchVehicles = async () => {
+  // Fetches both vehicles and available drivers in parallel
+  const fetchData = async () => {
     setLoading(true); setError('');
+    const token = localStorage.getItem('logimas_token');
+    if (!token) { setError("Authentication required."); setLoading(false); return; }
+    
     try {
-      const token = localStorage.getItem('logimas_token');
-      if (!token) throw new Error("Authentication required.");
-      const response = await fetch('http://localhost:8000/api/v1/vehicles/', { headers: { 'Authorization': `Bearer ${token}` } });
-      if (!response.ok) throw new Error("Failed to fetch vehicles.");
-      const data = await response.json();
-      setVehicles(data);
+      const [vehiclesRes, driversRes] = await Promise.all([
+        fetch('http://localhost:8000/api/v1/vehicles/', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('http://localhost:8000/api/v1/admin/delivery-personnel', { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      if (!vehiclesRes.ok) throw new Error("Failed to fetch vehicles.");
+      if (!driversRes.ok) throw new Error("Failed to fetch drivers.");
+      const vehiclesData = await vehiclesRes.json();
+      const driversData = await driversRes.json();
+      setVehicles(vehiclesData);
+      setDrivers(driversData);
     } catch (err) { setError(err.message); } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchVehicles(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
+  // Modal control functions
   const handleModalClose = () => { setIsModalOpen(false); setEditingVehicle(null); };
   const openAddModal = () => { setEditingVehicle(null); setIsModalOpen(true); };
   const openEditModal = (vehicle) => { setEditingVehicle(vehicle); setIsModalOpen(true); };
 
+  // API handler for creating or updating a vehicle
   const handleFormSubmit = async (formData) => {
     const token = localStorage.getItem('logimas_token');
     if (!token) { setError("Authentication required."); return; }
@@ -95,10 +136,11 @@ export default function Vehicles() {
       if (!response.ok) { const errData = await response.json(); throw new Error(errData.detail || 'Failed to save vehicle.'); }
       alert(`Vehicle successfully ${isEditMode ? 'updated' : 'added'}!`);
       handleModalClose();
-      fetchVehicles();
+      fetchData(); // Refresh data from server
     } catch (err) { setError(err.message); }
   };
 
+  // API handler for deleting a vehicle
   const handleDelete = async (vehicleId) => {
     if (!window.confirm("Are you sure? This cannot be undone.")) return;
     const token = localStorage.getItem('logimas_token');
@@ -111,6 +153,7 @@ export default function Vehicles() {
     } catch (err) { setError(err.message); }
   };
 
+  // Dynamic KPI card calculations
   const statusCounts = vehicles.reduce((acc, v) => {
     acc[v.status] = (acc[v.status] || 0) + 1;
     return acc;
@@ -121,25 +164,24 @@ export default function Vehicles() {
       <div>
         <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold">Vehicle Management</h1><button onClick={openAddModal} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg">+ Add Vehicle</button></div>
         {error && <p className="text-center text-red-500 font-semibold py-4">{error}</p>}
-        {loading ? <p className="text-center">Loading vehicles...</p> : (
+        {loading ? <p className="text-center">Loading...</p> : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-gray-800 p-6 rounded-xl shadow-md"><p className="text-sm text-gray-400">Total Vehicles</p><p className="text-2xl font-bold mt-1">{vehicles.length}</p></div>
-                <div className="bg-gray-800 p-6 rounded-xl shadow-md"><p className="text-sm text-gray-400">Active</p><p className="text-2xl font-bold text-green-400 mt-1">{statusCounts.active || 0}</p></div>
-                <div className="bg-gray-800 p-6 rounded-xl shadow-md"><p className="text-sm text-gray-400">In Maintenance</p><p className="text-2xl font-bold text-yellow-400 mt-1">{statusCounts.maintenance || 0}</p></div>
-                <div className="bg-gray-800 p-6 rounded-xl shadow-md"><p className="text-sm text-gray-400">On Delivery</p><p className="text-2xl font-bold text-blue-400 mt-1">{statusCounts['in-transit'] || 0}</p></div>
+                <div className="bg-gray-800 p-6 rounded-xl"><p className="text-sm text-gray-400">Total Vehicles</p><p className="text-2xl font-bold mt-1">{vehicles.length}</p></div>
+                <div className="bg-gray-800 p-6 rounded-xl"><p className="text-sm text-gray-400">Active</p><p className="text-2xl font-bold text-green-400 mt-1">{statusCounts.active || 0}</p></div>
+                <div className="bg-gray-800 p-6 rounded-xl"><p className="text-sm text-gray-400">In Maintenance</p><p className="text-2xl font-bold text-yellow-400 mt-1">{statusCounts.maintenance || 0}</p></div>
+                <div className="bg-gray-800 p-6 rounded-xl"><p className="text-sm text-gray-400">On Delivery</p><p className="text-2xl font-bold text-blue-400 mt-1">{statusCounts['in-transit'] || 0}</p></div>
             </div>
             <div className="bg-gray-800 rounded-xl shadow-md overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Plate</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Capacity</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Driver</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Location</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs uppercase text-gray-300">Plate</th>
+                    <th className="px-6 py-3 text-left text-xs uppercase text-gray-300">Type</th>
+                    <th className="px-6 py-3 text-left text-xs uppercase text-gray-300">Driver</th>
+                    <th className="px-6 py-3 text-left text-xs uppercase text-gray-300">Location</th>
+                    <th className="px-6 py-3 text-left text-xs uppercase text-gray-300">Status</th>
+                    <th className="px-6 py-3 text-left text-xs uppercase text-gray-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
@@ -147,11 +189,10 @@ export default function Vehicles() {
                     <tr key={v.vehicle_id} className="hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap font-medium">{v.plate_number}</td>
                       <td className="px-6 py-4 whitespace-nowrap capitalize">{v.vehicle_type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{v.capacity_kg} kg</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{v.driver_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{v.driver ? v.driver.name : <span className="text-gray-500">Unassigned</span>}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{v.current_location}</td>
-                      <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${v.status === 'active' ? 'bg-green-900 text-green-300' : v.status === 'maintenance' ? 'bg-yellow-900 text-yellow-300' : 'bg-gray-700 text-gray-300'}`}>{v.status}</span></td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm"><button onClick={() => openEditModal(v)} className="text-indigo-400 hover:text-indigo-300 mr-3">Edit</button><button onClick={() => handleDelete(v.vehicle_id)} className="text-red-400 hover:text-red-300">Delete</button></td>
+                      <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${v.status === 'active' ? 'bg-green-900 text-green-300' : v.status === 'maintenance' ? 'bg-yellow-900 text-yellow-300' : v.status === 'in-transit' ? 'bg-blue-900 text-blue-300' : 'bg-gray-700 text-gray-300'}`}>{v.status}</span></td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm"><button onClick={() => openEditModal(v)} className="text-indigo-400 hover:text-indigo-300 mr-4">Edit</button><button onClick={() => handleDelete(v.vehicle_id)} className="text-red-400 hover:text-red-300">Delete</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -160,7 +201,7 @@ export default function Vehicles() {
           </>
         )}
       </div>
-      <VehicleModal isOpen={isModalOpen} onClose={handleModalClose} onSubmit={handleFormSubmit} vehicle={editingVehicle} />
+      <VehicleModal isOpen={isModalOpen} onClose={handleModalClose} onSubmit={handleFormSubmit} vehicle={editingVehicle} drivers={drivers} />
     </DashboardLayout>
   );
 }
