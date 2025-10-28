@@ -142,3 +142,86 @@ export const fetchShipmentById = async (shipmentId: string) => {
     raw: { shipment, order, warehouse, telemetry, customer },
   };
 };
+
+// Fetch orders for a given customer
+export const fetchOrdersForCustomer = async (customerId: string, limit = 50) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, shipments(shipment_id, status, shipped_at, expected_arrival)')
+    .eq('customer_id', customerId)
+    .order('order_date', { ascending: false })  // Changed from 'created_at' to 'order_date'
+    .limit(limit);
+
+  if (error) throw error;
+  return data;
+};
+
+// Fetch simple order stats for a customer (counts by status and recent orders)
+// Fixed version of fetchOrderStatsForCustomer
+export const fetchOrderStatsForCustomer = async (customerId: string, recentLimit = 5) => {
+  // Get all orders for the customer with their shipments
+  const { data: orders, error: ordersError } = await supabase
+    .from('orders')
+    .select('*, shipments(shipment_id, status, expected_arrival, shipped_at)')
+    .eq('customer_id', customerId);
+
+  if (ordersError) {
+    console.error('fetchOrderStatsForCustomer error:', ordersError);
+    throw ordersError;
+  }
+
+  // Calculate stats from the fetched data
+  const total = orders?.length || 0;
+  let pending = 0;
+  let inTransit = 0;
+  let delivered = 0;
+
+  orders?.forEach(order => {
+    // Check if order has shipments
+    if (order.shipments && order.shipments.length > 0) {
+      // Use the first shipment's status
+      const shipmentStatus = order.shipments[0].status;
+      
+      if (shipmentStatus === 'pending') {
+        pending++;
+      } else if (shipmentStatus === 'in-transit' || shipmentStatus === 'in_transit') {
+        inTransit++;
+      } else if (shipmentStatus === 'delivered') {
+        delivered++;
+      }
+    } else {
+      // If no shipments, use order status
+      const orderStatus = order.status;
+      
+      if (orderStatus === 'pending') {
+        pending++;
+      } else if (orderStatus === 'in-transit' || orderStatus === 'in_transit') {
+        inTransit++;
+      } else if (orderStatus === 'delivered') {
+        delivered++;
+      }
+    }
+  });
+
+  // Get recent orders
+  const { data: recentOrders, error: recentErr } = await supabase
+    .from('orders')
+    .select('*, shipments(shipment_id, status, expected_arrival, shipped_at)')
+    .eq('customer_id', customerId)
+    .order('order_date', { ascending: false })
+    .limit(recentLimit);
+
+  if (recentErr) {
+    console.warn('fetchOrderStatsForCustomer recentErr', recentErr.message || recentErr);
+  }
+
+  console.log('Order stats:', { total, pending, inTransit, delivered }); // Debug log
+
+  return {
+    total,
+    pending,
+    inTransit,
+    delivered,
+    recentOrders: recentOrders || [],
+  };
+};
