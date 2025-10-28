@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .database import engine, Base
-from .api.routers import admin, ai_router,auth,delivery,order,inventory#analytics
+from .api.routers import admin, ai_router,auth,delivery,order,inventory,analytics
 from .config import settings
 
 # Import all models to register them with Base
@@ -65,11 +65,12 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(
     admin.router, prefix="/api/v1/admin", tags=["Admin - User Management"]
 )
+app.include_router(analytics.router, prefix="/api/v1", tags=["Analytics"])
 app.include_router(delivery.router, prefix="/api/v1/delivery", tags=["Delivery"])
 app.include_router(ai_router.router, prefix="/ai", tags=["AI"])
 app.include_router(order.router, prefix="/api/v1/orders", tags=["Orders"])
 app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["Inventory"])
-#app.include_router(analytics.router, prefix="/api", tags=["Analytics"])
+
 
 @app.get("/api/health", tags=["Health Check"])
 def health_check():
@@ -99,3 +100,26 @@ def database_health_check():
             "database": "disconnected",
             "error": str(e),
         }
+
+
+# Backwards-compatible alias for analytics summary at /api/v1/analytics/summary
+try:
+    from .api.routers.analytics import get_analytics_summary as _get_analytics_summary
+    from .api.routers.analytics import get_supabase_client as _get_supabase_client
+    from fastapi import HTTPException
+
+    @app.get("/api/v1/analytics/summary", tags=["Analytics"])
+    def _legacy_analytics_summary():
+        """Alias that calls the analytics router logic directly to ensure the legacy path works."""
+        try:
+            supabase = _get_supabase_client()
+        except HTTPException:
+            # propagate HTTPException from client factory
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+        return _get_analytics_summary(supabase)
+except Exception:
+    # If imports fail, skip adding alias — main router still provides analytics endpoints.
+    pass
