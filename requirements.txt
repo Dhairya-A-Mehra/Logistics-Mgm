@@ -49,3 +49,6 @@ python-multipart
 Faker
 httpx
 pydantic[email]
+
+#extras
+geopy

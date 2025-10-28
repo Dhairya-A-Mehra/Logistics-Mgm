@@ -1,10 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-
-
 from .database import engine, Base
-from .api.routers import admin, ai_router,auth,delivery
+from .api.routers import admin, ai_router,auth,delivery,order,inventory#analytics
 from .config import settings
 
 # Import all models to register them with Base
@@ -69,7 +67,9 @@ app.include_router(
 )
 app.include_router(delivery.router, prefix="/api/v1/delivery", tags=["Delivery"])
 app.include_router(ai_router.router, prefix="/ai", tags=["AI"])
-
+app.include_router(order.router, prefix="/api/v1/orders", tags=["Orders"])
+app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["Inventory"])
+#app.include_router(analytics.router, prefix="/api", tags=["Analytics"])
 
 @app.get("/api/health", tags=["Health Check"])
 def health_check():
