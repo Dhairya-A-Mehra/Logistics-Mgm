@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .database import engine, Base
-from .api.routers import admin, ai_router, auth, delivery, order, inventory, analytics,shipment
+from .api.routers import admin, ai_router, auth, delivery, order, inventory, analytics,shipment,warehouse,vehicle
 from .config import settings
 import logging
 
@@ -65,6 +65,8 @@ app.include_router(ai_router.router, prefix="/ai", tags=["AI"])
 app.include_router(order.router, prefix="/api/v1/orders", tags=["Orders"])
 app.include_router(shipment.router, prefix="/api/v1/shipments", tags=["Shipments"])
 app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["Inventory"])
+app.include_router(warehouse.router, prefix="/api/v1/warehouses", tags=["Warehouses"])
+app.include_router(vehicle.router, prefix="/api/v1/vehicles", tags=["Vehicles"])
 
 @app.get("/api/health", tags=["Health Check"])
 def health_check():

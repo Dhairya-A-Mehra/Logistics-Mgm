@@ -72,7 +72,7 @@ def create_shipment_for_order(db: Session, order_id: UUID):
 
     # 4. Update the order and vehicle statuses
     order.status = 'shipped'
-
+    vehicle.status='in-transit'
     # 5. Commit the transaction
     db.commit()
     db.refresh(db_shipment)
