@@ -2,10 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .database import engine, Base
-from .api.routers import admin, ai_router,auth,delivery,order,inventory,analytics
+from .api.routers import admin, ai_router, auth, delivery, order, inventory, analytics,shipment
 from .config import settings
+import logging
 
-# Import all models to register them with Base
+# Import models to register them with Base
 from .models import (
     Customer,
     Warehouse,
@@ -19,15 +20,12 @@ from .models import (
     Document,
     AgentAuditLog,
 )
-import logging
 
 logger = logging.getLogger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown"""
-    # Startup: Create database tables (only if DB is accessible)
     try:
         logger.info("Attempting to create database tables...")
         Base.metadata.create_all(bind=engine)
@@ -38,12 +36,10 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown: Clean up resources
     logger.info("Application shutting down")
 
-
 app = FastAPI(
-    title="Logimas API",
+    title="LogiMAS API",
     version="1.0.0",
     description="Logistics Management System API with JWT Authentication",
     docs_url="/api/docs",
@@ -62,28 +58,23 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
-app.include_router(
-    admin.router, prefix="/api/v1/admin", tags=["Admin - User Management"]
-)
-app.include_router(analytics.router, prefix="/api/v1", tags=["Analytics"])
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin - User Management"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 app.include_router(delivery.router, prefix="/api/v1/delivery", tags=["Delivery"])
 app.include_router(ai_router.router, prefix="/ai", tags=["AI"])
 app.include_router(order.router, prefix="/api/v1/orders", tags=["Orders"])
+app.include_router(shipment.router, prefix="/api/v1/shipments", tags=["Shipments"])
 app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["Inventory"])
-
 
 @app.get("/api/health", tags=["Health Check"])
 def health_check():
     """Health check endpoint"""
     return {"status": "ok", "message": "API is running"}
 
-
 @app.get("/api/health/db", tags=["Health Check"])
 def database_health_check():
     """Database health check endpoint"""
     from sqlalchemy import text
-    from .database import engine
-
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
@@ -100,26 +91,3 @@ def database_health_check():
             "database": "disconnected",
             "error": str(e),
         }
-
-
-# Backwards-compatible alias for analytics summary at /api/v1/analytics/summary
-try:
-    from .api.routers.analytics import get_analytics_summary as _get_analytics_summary
-    from .api.routers.analytics import get_supabase_client as _get_supabase_client
-    from fastapi import HTTPException
-
-    @app.get("/api/v1/analytics/summary", tags=["Analytics"])
-    def _legacy_analytics_summary():
-        """Alias that calls the analytics router logic directly to ensure the legacy path works."""
-        try:
-            supabase = _get_supabase_client()
-        except HTTPException:
-            # propagate HTTPException from client factory
-            raise
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-        return _get_analytics_summary(supabase)
-except Exception:
-    # If imports fail, skip adding alias — main router still provides analytics endpoints.
-    pass
