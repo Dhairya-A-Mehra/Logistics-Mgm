@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import TrackingMap from "@/components/TrackingMap";
 import { fetchShipmentById } from "@/lib/supabase/client";
@@ -103,21 +104,32 @@ const customerMenuItems = [
   },
 ];
 
-// replaced static mock with live fetch
-
 export default function CustomerTracking() {
   const [shipmentId, setShipmentId] = useState("");
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams(); // Get query params from URL
 
-  const handleTrack = async () => {
-    if (!shipmentId) return;
+  // Auto-load shipment if ID is in URL query param
+  useEffect(() => {
+    const idFromUrl = searchParams.get("id");
+    if (idFromUrl && !selectedShipment && !loading) {
+      setShipmentId(idFromUrl);
+      handleTrack(idFromUrl); // Auto-fetch
+    }
+  }, [searchParams]); // Re-run if URL changes (e.g., browser back/forward)
+
+  const handleTrack = async (id?: string) => {
+    const trackId = id || shipmentId;
+    if (!trackId) return;
     setLoading(true);
     try {
-      const data = await fetchShipmentById(shipmentId);
+      const data = await fetchShipmentById(trackId);
       if (!data) {
         alert("Shipment not found");
         setSelectedShipment(null);
+        // Optionally clear URL if not found
+        window.history.replaceState({}, document.title, "/customer/tracking");
       } else {
         setSelectedShipment({
           id: data.id,
@@ -130,6 +142,15 @@ export default function CustomerTracking() {
           destination: data.destination,
           currentLocation: data.currentLocation,
         });
+        // Update URL with ID (without reloading)
+        const urlId = searchParams.get("id");
+        if (urlId !== trackId) {
+          window.history.replaceState(
+            {},
+            document.title,
+            `/customer/tracking?id=${trackId}`
+          );
+        }
       }
     } catch (e) {
       console.error(e);
@@ -140,6 +161,9 @@ export default function CustomerTracking() {
     }
   };
 
+  // Show input only if no shipment is selected or URL has no ID
+  const showInput = !selectedShipment || !searchParams.get("id");
+
   return (
     <DashboardLayout role="customer" menuItems={customerMenuItems}>
       <div>
@@ -147,41 +171,43 @@ export default function CustomerTracking() {
           Track Your Shipment
         </h1>
 
-        {/* Shipment ID Search */}
-        <div className="mb-6">
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={shipmentId}
-                onChange={(e) => setShipmentId(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleTrack()}
-                placeholder="Enter Shipment ID (e.g., SHP-001)"
-                className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
-              />
-              <svg
-                className="absolute left-4 top-3.5 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        {/* Shipment ID Search - Conditional */}
+        {showInput && (
+          <div className="mb-6">
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={shipmentId}
+                  onChange={(e) => setShipmentId(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleTrack()}
+                  placeholder="Enter Shipment ID (e.g., SHP-001)"
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
                 />
-              </svg>
+                <svg
+                  className="absolute left-4 top-3.5 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <button
+                onClick={() => handleTrack()}
+                disabled={loading}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+              >
+                {loading ? "Loading..." : "Track Shipment"}
+              </button>
             </div>
-            <button
-              onClick={handleTrack}
-              disabled={loading}
-              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
-            >
-              {loading ? "Loading..." : "Track Shipment"}
-            </button>
           </div>
-        </div>
+        )}
 
         {/* Shipment Details & Map */}
         {selectedShipment && (
@@ -216,7 +242,8 @@ export default function CustomerTracking() {
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       selectedShipment.status === "delivered"
                         ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                        : selectedShipment.status === "in-transit"
+                        : selectedShipment.status === "in_transit" ||
+                          selectedShipment.status === "in-transit"
                         ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
                         : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
                     }`}
@@ -229,7 +256,9 @@ export default function CustomerTracking() {
                     ETA
                   </p>
                   <p className="font-semibold text-gray-900 dark:text-white">
-                    {selectedShipment.eta}
+                    {selectedShipment.eta
+                      ? new Date(selectedShipment.eta).toLocaleDateString()
+                      : "—"}
                   </p>
                 </div>
               </div>
@@ -257,6 +286,29 @@ export default function CustomerTracking() {
               destination={selectedShipment.destination}
               currentLocation={selectedShipment.currentLocation}
             />
+          </div>
+        )}
+
+        {/* Fallback if no shipment loaded */}
+        {!selectedShipment && !showInput && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              No shipment selected. Use the search above to track one.
+            </p>
+            <button
+              onClick={() => {
+                setSelectedShipment(null);
+                setShipmentId("");
+                window.history.replaceState(
+                  {},
+                  document.title,
+                  "/customer/tracking"
+                );
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Track Another
+            </button>
           </div>
         )}
       </div>
