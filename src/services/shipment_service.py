@@ -1,6 +1,6 @@
 import math
 from uuid import UUID
-from datetime import datetime, timezone
+from datetime import datetime, timezone,timedelta
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
@@ -34,7 +34,7 @@ def find_closest_warehouse(dest_lat: float, dest_lon: float):
     return closest, min_dist
 
 def find_available_vehicle(db: Session):
-    return db.query(models.Vehicle).filter(models.Vehicle.status == 'available').first()
+    return db.query(models.Vehicle).filter(models.Vehicle.status == 'active').first()
 
 def create_shipment_for_order(db: Session, order_id: UUID):
     """
@@ -72,8 +72,7 @@ def create_shipment_for_order(db: Session, order_id: UUID):
 
     # 4. Update the order and vehicle statuses
     order.status = 'shipped'
-    vehicle.status = 'in-transit'
-
+    vehicle.status='in-transit'
     # 5. Commit the transaction
     db.commit()
     db.refresh(db_shipment)

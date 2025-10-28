@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
-
+from typing import List, Optional 
 from ... import security, database
 from ...schemas import order as order_schema
 from ...services import order_service
@@ -43,4 +43,33 @@ def place_order(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while placing the order."
+        )
+
+
+@router.get(
+    "/",
+    response_model=List[order_schema.OrderPublicSchema],
+    summary="Get orders by status (Admin Only)",
+    description="Retrieves a list of orders, filterable by status (e.g., 'pending', 'shipped')."
+)
+def get_orders(
+    status: Optional[str] = None,
+    db: Session = Depends(database.get_db),
+    current_user: Customer = Depends(security.get_admin_user)
+):
+    """
+    Endpoint for an admin to fetch orders. If a status is provided,
+    it filters the orders by that status.
+    """
+    try:
+        if status:
+            orders = order_service.get_orders_by_status(db, status=status)
+        else:
+            # In the future, you could add a service to get all orders
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Status filter is required.")
+        return orders
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred: {str(e)}"
         )

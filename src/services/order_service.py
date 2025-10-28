@@ -64,3 +64,9 @@ def create_order(db: Session, order_data: order_schema.OrderCreateSchema, custom
 
     # 5. Return only the created order
     return db_order
+
+def get_orders_by_status(db: Session, status: str):
+    """
+    Retrieves a list of all orders that match a given status.
+    """
+    return db.query(models.Order).filter(models.Order.status == status).order_by(models.Order.order_date.desc()).all()

@@ -1,91 +1,166 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 
 const adminMenuItems = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
-  { name: 'Chat', href: '/admin/chat', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg> },
-  { name: 'Tracking', href: '/admin/tracking', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg> },
-  { name: 'Knowledge Base', href: '/admin/knowledge-base', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
-  { name: 'Analysis', href: '/admin/analysis', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> },
-  { name: 'Users', href: '/admin/users', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> },
-  { name: 'Warehouses', href: '/admin/warehouses', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg> },
-  { name: 'Vehicles', href: '/admin/vehicles', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> },
+    { name: 'Dashboard', href: '/admin/dashboard', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
+    { name: 'Dispatch Orders', href: '/admin/dispatch', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg> },
+    { name: 'Tracking', href: '/admin/tracking', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg> },
+    { name: 'Knowledge Base', href: '/admin/knowledge-base', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
+    { name: 'Analysis', href: '/admin/analysis', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> },
+    { name: 'Users', href: '/admin/users', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> },
+    { name: 'Warehouses', href: '/admin/warehouses', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg> },
+    { name: 'Vehicles', href: '/admin/vehicles', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> },
 ];
 
-const vehicles = [
-  { id: 'VH-001', type: 'Truck', plate: 'DL-01-AB-1234', capacity: '5 tons', status: 'active', driver: 'John Doe', location: 'Delhi' },
-  { id: 'VH-002', type: 'Van', plate: 'MH-02-CD-5678', capacity: '2 tons', status: 'active', driver: 'Jane Smith', location: 'Mumbai' },
-  { id: 'VH-003', type: 'Truck', plate: 'KA-03-EF-9012', capacity: '5 tons', status: 'maintenance', driver: 'Bob Johnson', location: 'Bangalore' },
-  { id: 'VH-004', type: 'Bike', plate: 'TN-04-GH-3456', capacity: '50 kg', status: 'active', driver: 'Alice Brown', location: 'Chennai' },
-];
+const initialVehicleState = {
+  vehicle_type: 'truck', plate_number: '', capacity_kg: 1000, fuel_type: 'diesel',
+  driver_name: '', current_location: '', status: 'active'
+};
+
+const VehicleModal = ({ isOpen, onClose, onSubmit, vehicle }) => {
+  const [formData, setFormData] = useState(initialVehicleState);
+  const isEditMode = vehicle && vehicle.vehicle_id;
+
+  useEffect(() => {
+    if (isOpen) {
+        setFormData(isEditMode ? { ...vehicle } : { ...initialVehicleState });
+    }
+  }, [vehicle, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit({ ...formData, capacity_kg: parseFloat(formData.capacity_kg) });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+      <div className="bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-lg text-white">
+        <h2 className="text-2xl font-bold mb-6">{isEditMode ? 'Edit Vehicle' : 'Add New Vehicle'}</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div><label className="block text-sm font-medium text-gray-400 mb-1">Plate Number</label><input name="plate_number" value={formData.plate_number} onChange={handleChange} placeholder="e.g., MH-01-AB-1234" required className="w-full p-2 bg-gray-700 border-gray-600 rounded"/></div>
+          <div><label className="block text-sm font-medium text-gray-400 mb-1">Driver Name</label><input name="driver_name" value={formData.driver_name} onChange={handleChange} placeholder="e.g., John Doe" className="w-full p-2 bg-gray-700 border-gray-600 rounded"/></div>
+          <div><label className="block text-sm font-medium text-gray-400 mb-1">Current Location</label><input name="current_location" value={formData.current_location} onChange={handleChange} placeholder="e.g., Mumbai" className="w-full p-2 bg-gray-700 border-gray-600 rounded"/></div>
+          <div><label className="block text-sm font-medium text-gray-400 mb-1">Capacity (kg)</label><input name="capacity_kg" type="number" value={formData.capacity_kg} onChange={handleChange} required className="w-full p-2 bg-gray-700 border-gray-600 rounded"/></div>
+          <div><label className="block text-sm font-medium text-gray-400 mb-1">Vehicle Type</label><select name="vehicle_type" value={formData.vehicle_type} onChange={handleChange} className="w-full p-2 bg-gray-700 border-gray-600 rounded"><option value="truck">Truck</option><option value="van">Van</option><option value="bike">Bike</option></select></div>
+          <div><label className="block text-sm font-medium text-gray-400 mb-1">Fuel Type</label><select name="fuel_type" value={formData.fuel_type} onChange={handleChange} className="w-full p-2 bg-gray-700 border-gray-600 rounded"><option value="diesel">Diesel</option><option value="petrol">Petrol</option><option value="EV">EV</option><option value="CNG">CNG</option></select></div>
+          <div><label className="block text-sm font-medium text-gray-400 mb-1">Status</label><select name="status" value={formData.status} onChange={handleChange} className="w-full p-2 bg-gray-700 border-gray-600 rounded"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="inactive">Inactive</option></select></div>
+          <div className="flex justify-end gap-4 pt-4"><button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500">Cancel</button><button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">{isEditMode ? 'Save Changes' : 'Add Vehicle'}</button></div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 export default function Vehicles() {
+  const [vehicles, setVehicles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
+
+  const fetchVehicles = async () => {
+    setLoading(true); setError('');
+    try {
+      const token = localStorage.getItem('logimas_token');
+      if (!token) throw new Error("Authentication required.");
+      const response = await fetch('http://localhost:8000/api/v1/vehicles/', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!response.ok) throw new Error("Failed to fetch vehicles.");
+      const data = await response.json();
+      setVehicles(data);
+    } catch (err) { setError(err.message); } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchVehicles(); }, []);
+
+  const handleModalClose = () => { setIsModalOpen(false); setEditingVehicle(null); };
+  const openAddModal = () => { setEditingVehicle(null); setIsModalOpen(true); };
+  const openEditModal = (vehicle) => { setEditingVehicle(vehicle); setIsModalOpen(true); };
+
+  const handleFormSubmit = async (formData) => {
+    const token = localStorage.getItem('logimas_token');
+    if (!token) { setError("Authentication required."); return; }
+    const isEditMode = editingVehicle && editingVehicle.vehicle_id;
+    const url = isEditMode ? `http://localhost:8000/api/v1/vehicles/${editingVehicle.vehicle_id}` : 'http://localhost:8000/api/v1/vehicles/';
+    const method = isEditMode ? 'PATCH' : 'POST';
+    try {
+      const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(formData) });
+      if (!response.ok) { const errData = await response.json(); throw new Error(errData.detail || 'Failed to save vehicle.'); }
+      alert(`Vehicle successfully ${isEditMode ? 'updated' : 'added'}!`);
+      handleModalClose();
+      fetchVehicles();
+    } catch (err) { setError(err.message); }
+  };
+
+  const handleDelete = async (vehicleId) => {
+    if (!window.confirm("Are you sure? This cannot be undone.")) return;
+    const token = localStorage.getItem('logimas_token');
+    if (!token) { setError("Authentication required."); return; }
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/vehicles/${vehicleId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      if (response.status !== 204) { const errData = await response.json(); throw new Error(errData.detail || 'Failed to delete vehicle.'); }
+      alert("Vehicle deleted!");
+      setVehicles(vehicles.filter(v => v.vehicle_id !== vehicleId));
+    } catch (err) { setError(err.message); }
+  };
+
+  const statusCounts = vehicles.reduce((acc, v) => {
+    acc[v.status] = (acc[v.status] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <DashboardLayout role="admin" menuItems={adminMenuItems}>
       <div>
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Vehicle Management</h1>
-          <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors">+ Add Vehicle</button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Vehicles</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">4</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Active</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">3</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-            <p className="text-sm text-gray-600 dark:text-gray-400">In Maintenance</p>
-            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">1</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-            <p className="text-sm text-gray-600 dark:text-gray-400">On Delivery</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">2</p>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Plate</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Capacity</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Driver</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Location</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {vehicles.map((vehicle) => (
-                <tr key={vehicle.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">{vehicle.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{vehicle.type}</td>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 dark:text-white">{vehicle.plate}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{vehicle.capacity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{vehicle.driver}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{vehicle.location}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${vehicle.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'}`}>
-                      {vehicle.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 mr-3">Edit</button>
-                    <button className="text-red-600 hover:text-red-900 dark:text-red-400">Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="flex justify-between items-center mb-6"><h1 className="text-3xl font-bold">Vehicle Management</h1><button onClick={openAddModal} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg">+ Add Vehicle</button></div>
+        {error && <p className="text-center text-red-500 font-semibold py-4">{error}</p>}
+        {loading ? <p className="text-center">Loading vehicles...</p> : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="bg-gray-800 p-6 rounded-xl shadow-md"><p className="text-sm text-gray-400">Total Vehicles</p><p className="text-2xl font-bold mt-1">{vehicles.length}</p></div>
+                <div className="bg-gray-800 p-6 rounded-xl shadow-md"><p className="text-sm text-gray-400">Active</p><p className="text-2xl font-bold text-green-400 mt-1">{statusCounts.active || 0}</p></div>
+                <div className="bg-gray-800 p-6 rounded-xl shadow-md"><p className="text-sm text-gray-400">In Maintenance</p><p className="text-2xl font-bold text-yellow-400 mt-1">{statusCounts.maintenance || 0}</p></div>
+                <div className="bg-gray-800 p-6 rounded-xl shadow-md"><p className="text-sm text-gray-400">On Delivery</p><p className="text-2xl font-bold text-blue-400 mt-1">{statusCounts['in-transit'] || 0}</p></div>
+            </div>
+            <div className="bg-gray-800 rounded-xl shadow-md overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Plate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Capacity</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Driver</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Location</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {vehicles.map((v) => (
+                    <tr key={v.vehicle_id} className="hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap font-medium">{v.plate_number}</td>
+                      <td className="px-6 py-4 whitespace-nowrap capitalize">{v.vehicle_type}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{v.capacity_kg} kg</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{v.driver_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{v.current_location}</td>
+                      <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${v.status === 'active' ? 'bg-green-900 text-green-300' : v.status === 'maintenance' ? 'bg-yellow-900 text-yellow-300' : 'bg-gray-700 text-gray-300'}`}>{v.status}</span></td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm"><button onClick={() => openEditModal(v)} className="text-indigo-400 hover:text-indigo-300 mr-3">Edit</button><button onClick={() => handleDelete(v.vehicle_id)} className="text-red-400 hover:text-red-300">Delete</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
+      <VehicleModal isOpen={isModalOpen} onClose={handleModalClose} onSubmit={handleFormSubmit} vehicle={editingVehicle} />
     </DashboardLayout>
   );
 }
