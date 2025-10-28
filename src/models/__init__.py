@@ -9,6 +9,7 @@ from .fuel_price import FuelPrice
 from .packaging_type import PackagingType
 from .document import Document
 from .agent_audit_log import AgentAuditLog
+from .analytics_summary import AnalyticsSummary
 
 __all__ = [
     "Customer",
@@ -22,4 +23,5 @@ __all__ = [
     "PackagingType",
     "Document",
     "AgentAuditLog",
+    "AnalyticsSummary",
 ]
