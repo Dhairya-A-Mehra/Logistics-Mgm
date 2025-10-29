@@ -3,6 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from .order import OrderItemSchema
 # --- EXISTING SCHEMAS (Unchanged) ---
 class ShipmentCreateSchema(BaseModel):
     order_id: UUID = Field(..., description="The ID of the existing order to create a shipment for.")
@@ -22,29 +23,32 @@ class ShipmentPublicSchema(BaseModel):
 # A nested schema to represent basic customer info
 class CustomerInfoForShipment(BaseModel):
     name: str
+    phone: Optional[str] = None # <-- ADD THIS LINE
     class Config:
         from_attributes = True
 
-# A nested schema to represent the destination address
 class DestinationForShipment(BaseModel):
     address: str
     city: str
     class Config:
         from_attributes = True
 
-# A nested schema to represent the order linked to the shipment
+# --- MODIFIED: Add 'items' to the order info ---
 class OrderInfoForShipment(BaseModel):
     customer: CustomerInfoForShipment
     destination: DestinationForShipment
+    items: List[OrderItemSchema] = [] # <-- ADD THIS LINE
     class Config:
         from_attributes = True
 
-# The main response schema for a single delivery item
+# The main response schema is now richer
 class DriverShipmentDetailSchema(BaseModel):
     shipment_id: UUID
     status: str
     current_eta: Optional[datetime] = None
     order: OrderInfoForShipment
+    # We also need the distance_km for the UI
+    distance_km: Optional[float] = None # <-- ADD THIS LINE
     class Config:
         from_attributes = True
 
