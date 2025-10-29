@@ -82,7 +82,7 @@ const deliveryMenuItems = [
       </svg>
     ),
   },
-  {
+  /*{
     name: "My Deliveries",
     href: "/delivery/deliveries",
     icon: (
@@ -100,7 +100,7 @@ const deliveryMenuItems = [
         />
       </svg>
     ),
-  },
+  },*/
 ];
 
 // Note: previously this page used a static `shipmentsData` object. We now fetch from Supabase.
