@@ -99,8 +99,8 @@ const adminMenuItems = [
         />
       </svg>
     ),
-  },
-  {
+  }
+  /*{
     name: "Analysis",
     href: "/admin/analysis",
     icon: (
@@ -118,7 +118,7 @@ const adminMenuItems = [
         />
       </svg>
     ),
-  },
+  }*/,
   {
     name: "Users",
     href: "/admin/users",
